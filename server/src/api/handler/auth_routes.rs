@@ -165,7 +165,7 @@ pub mod authentication {
         });
 
         db.delete_user(user_unique_id.to_string()).await.unwrap();
-        db.create_user(user).await.unwrap();
+        db.create_user(user.clone()).await.unwrap();
 
         info!("Authentication Successful!");
 
@@ -173,7 +173,7 @@ pub mod authentication {
         let token = encode_jwt(&user_unique_id)
             .map_err(|e| Error::Token(format!("Failed to generate token: {}", e)))?;
 
-        info!("Successfully authenticated user");
+        info!("Successfully authenticated user: {}", user.user_name);
         Ok(HttpResponse::Ok().json(AuthenticationResponse { token }))
     }
 }
