@@ -5,6 +5,7 @@ use actix_web::{
     web::{self, Data, JsonConfig},
     App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
+use api::handler::auth_routes::{authentication, registration};
 use dotenv::dotenv;
 use std::env;
 use std::path::PathBuf;
@@ -18,9 +19,7 @@ mod db;
 mod models;
 
 // Auth route handlers
-use crate::api::handler::auth_routes::{
-    finish_authentication, finish_register, start_authentication, start_register,
-};
+use crate::api::handler::auth_routes;
 
 // Poll route handlers
 use crate::api::handler::poll_routes::{
@@ -135,10 +134,10 @@ async fn main() -> std::io::Result<()> {
             .service(api_handler)
             .service(
                 web::scope("/api/auth")
-                    .service(start_register)
-                    .service(finish_register)
-                    .service(start_authentication)
-                    .service(finish_authentication),
+                    .service(registration::start)
+                    .service(registration::finish)
+                    .service(authentication::start)
+                    .service(authentication::finish),
             )
             .service(
                 web::scope("/api")

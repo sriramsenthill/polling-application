@@ -14,14 +14,21 @@ Unified errors for simpler Responses
 */
 #[derive(Debug, Error)]
 pub(crate) enum Error {
-    #[error("Unknown webauthn error")]
+    #[error("Unknown webauthn error: {0}")]
     Unknown(WebauthnError),
     #[error("Corrupt session")]
     CorruptSession,
-    #[error("Bad request")]
+    #[error("Bad request: {0}")]
     BadRequest(#[from] WebauthnError),
+    #[error("Database error: {0}")]
+    Database(String),
+    #[error("User not found")]
+    UserNotFound,
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+    #[error("Token error: {0}")]
+    Token(String),
 }
-
 impl actix_web::ResponseError for Error {
     fn status_code(&self) -> StatusCode {
         StatusCode::INTERNAL_SERVER_ERROR
