@@ -1,33 +1,157 @@
-use actix_web::{middleware, App, HttpServer};
+use actix_files::NamedFile;
+use actix_web::{
+    get,
+    middleware::{self, Logger},
+    web::{self, Data, JsonConfig},
+    App, HttpRequest, HttpResponse, HttpServer, Responder,
+};
 use dotenv::dotenv;
 use std::env;
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use actix_cors::Cors;
+use webauthn_rs::prelude::*;
 
 mod api;
 mod db;
-mod error;
 mod models;
 
+// Auth route handlers
+use crate::api::handler::auth_routes::{
+    finish_authentication, finish_register, start_authentication, start_register,
+};
+
+// Poll route handlers
+use crate::api::handler::poll_routes::{
+    add_polls, cast_vote, close_poll, delete_poll, fetch_polls, poll_results, reset_vote,
+};
+
+use crate::db::{
+    db_config::DbConfig, init_poll_repo, init_user_repo, poll_repository::PollRepository,
+    user_repository::UserRepository,
+};
+use crate::models::{
+    authentication_state::AuthenticationState, registration_state::RegistrationState,
+};
+
+/// Serve the root index.html file.
+#[get("/")]
+async fn root_handler() -> impl Responder {
+    // Your root handler implementation here
+    HttpResponse::Ok().body("Welcome")
+}
+
+/// Basic API endpoint for testing.
+#[get("/api")]
+async fn api_handler() -> impl Responder {
+    HttpResponse::Ok().json("API is running.")
+}
+
+/// Configure WebAuthn.
+fn setup_webauthn() -> Data<Webauthn> {
+    let rp_id = "localhost";
+    let rp_origin = Url::parse("http://localhost:3000").expect("Invalid URL");
+    let webauthn = WebauthnBuilder::new(rp_id, &rp_origin)
+        .expect("Invalid WebAuthn configuration")
+        .build()
+        .expect("Failed to initialize WebAuthn");
+    Data::new(webauthn)
+}
+
+/// Initialize database repositories.
+async fn setup_repositories(
+    config: DbConfig,
+) -> (Data<dyn PollRepository>, Data<dyn UserRepository>) {
+    match init_poll_repo(config.clone()).await {
+        Ok(poll_repo) => {
+            let poll_repo = Arc::new(poll_repo) as Arc<dyn PollRepository>;
+
+            match init_user_repo(config).await {
+                Ok(user_repo) => {
+                    let user_repo = Arc::new(user_repo) as Arc<dyn UserRepository>;
+                    (Data::from(poll_repo), Data::from(user_repo))
+                }
+                Err(err) => {
+                    eprintln!("Failed to initialize user repository: {:?}", err);
+                    // Handle error (you could return an empty repo, shutdown, etc.)
+                    std::process::exit(1);
+                }
+            }
+        }
+        Err(err) => {
+            eprintln!("Failed to initialize poll repository: {:?}", err);
+            std::process::exit(1);
+        }
+    }
+}
+
+/// Main application entry point.
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // Initialize logging and environment variables.
     dotenv().ok();
     env_logger::init();
+    if env::var_os("RUST_LOG").is_none() {
+        env::set_var("RUST_LOG", "info");
+    }
 
-    let mongo_uri = env::var("MONGODB_URI").expect("MONGODB_URI must be set");
-    let db_name = env::var("DB_NAME").expect("DB_NAME must be set");
+    // Database configuration.
+    let db_config = DbConfig::new(
+        "mongodb", // This is already a `&str`, so no change needed
+        env::var("DATABASE_URI")
+            .unwrap_or_else(|_| "mongodb://localhost:27017/?directConnection=true".to_string())
+            .as_str(), // Convert `String` to `&str` using `.as_str()`
+        "rustest", // This is already a `&str`, so no change needed
+    );
 
-    let db = db::Database::connect(&mongo_uri, &db_name)
-        .await
-        .expect("Failed to connect to MongoDB");
+    // Set up shared state and repositories.
+    let webauthn = setup_webauthn();
+    let reg_state = Data::new(RegistrationState::new());
+    let auth_state = Data::new(AuthenticationState::new());
+    let (poll_repo, user_repo) = setup_repositories(db_config).await;
 
-    let db_data = actix_web::web::Data::new(db);
+    let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let port: u16 = port.parse().expect("Invalid PORT value");
 
+    // Start the HTTP server.
     HttpServer::new(move || {
         App::new()
-            .app_data(db_data.clone())
-            .wrap(middleware::Logger::default())
-            .configure(api::config)
+            .wrap(Logger::default())
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allow_any_method()
+                    .allow_any_header()
+                    .supports_credentials(),
+            )
+            .app_data(webauthn.clone())
+            .app_data(reg_state.clone())
+            .app_data(auth_state.clone())
+            .app_data(poll_repo.clone())
+            .app_data(user_repo.clone())
+            .app_data(JsonConfig::default())
+            .service(root_handler)
+            .service(api_handler)
+            .service(
+                web::scope("/api/auth")
+                    .service(start_register)
+                    .service(finish_register)
+                    .service(start_authentication)
+                    .service(finish_authentication),
+            )
+            .service(
+                web::scope("/api")
+                    .service(add_polls)
+                    .service(fetch_polls)
+                    .service(delete_poll)
+                    .service(cast_vote)
+                    .service(close_poll)
+                    .service(reset_vote)
+                    .service(poll_results),
+            )
     })
-    .bind("127.0.0.1:8080")?
+    .bind(("0.0.0.0", port))?
     .run()
     .await
 }
