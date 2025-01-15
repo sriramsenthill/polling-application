@@ -20,7 +20,9 @@ pub(crate) async fn start_register(
     webauthn: Data<Webauthn>,
 ) -> WebResult<Json<CreationChallengeResponse>> {
     info!("Start register");
-    reg_state_storage.remove("reg_state".to_string()).await;
+
+    // Optionally remove the previous state if necessary
+    // reg_state_storage.remove("reg_state".to_string()).await;
 
     let username = username.into_inner();
     let user_unique_id = Uuid::new_v4();
@@ -38,6 +40,9 @@ pub(crate) async fn start_register(
         (username.clone(), user_unique_id, reg_state.clone())
     );
 
+    // Log before storing
+    println!("Storing registration state: {:?}", reg_state);
+
     reg_state_storage
         .insert((username.to_string(), user_unique_id, reg_state.clone()))
         .await;
@@ -46,7 +51,6 @@ pub(crate) async fn start_register(
     info!("Registration Successful!");
     Ok(Json(ccr))
 }
-
 #[post("finish_reg")]
 pub(crate) async fn finish_register(
     req: Json<RegisterPublicKeyCredential>,
@@ -54,36 +58,47 @@ pub(crate) async fn finish_register(
     db: Data<dyn UserRepository>,
     webauthn: Data<Webauthn>,
 ) -> HttpResponse {
-    println!("Entered finsih reg");
-    let registration_state = reg_state_storage
-        .get("reg_state".to_string())
-        .await
-        .ok_or_else(|| {
-            eprintln!("Registration state not found for user ID:");
-            Error::CorruptSession
-        })
-        .unwrap();
+    println!("Entered finish reg");
+
+    // Attempt to retrieve the registration state
+    let registration_state = match reg_state_storage.get("reg_state".to_string()).await {
+        Some(state) => state,
+        None => {
+            eprintln!("Registration state not found for user ID.");
+            return HttpResponse::BadRequest().body("Corrupt or missing session state");
+        }
+    };
+
     let (username, user_unique_id, reg_state) = registration_state;
 
-    let sk = webauthn
-        .finish_passkey_registration(&req, &reg_state)
-        .map_err(|e| {
-            info!("challenge_register -> {:?}", e);
-            Error::BadRequest(e)
-        });
-    let final_keys = sk.unwrap();
+    // Attempt to complete the passkey registration
+    let final_keys = match webauthn.finish_passkey_registration(&req, &reg_state) {
+        Ok(keys) => keys,
+        Err(e) => {
+            info!("Error finishing passkey registration: {:?}", e);
+            return HttpResponse::BadRequest().body("Failed to finish registration");
+        }
+    };
 
+    // Create the new user object
     let user = User {
         user_id: user_unique_id.to_string(),
-        user_name: username,
+        user_name: username.clone(),
         keys: vec![final_keys],
         owned_polls: None,
         polls_voted: None,
     };
 
+    // Attempt to store the user in the database
     match db.create_user(user).await {
-        Ok(_) => HttpResponse::Ok().body("success"),
-        Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
+        Ok(_) => {
+            println!("User successfully registered: {}", username);
+            HttpResponse::Ok().body("Registration successful")
+        }
+        Err(err) => {
+            eprintln!("Database error while creating user: {}", err);
+            HttpResponse::InternalServerError().body("Error storing user in the database")
+        }
     }
 }
 
