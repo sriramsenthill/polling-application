@@ -101,7 +101,7 @@ async fn main() -> std::io::Result<()> {
         env::var("DATABASE_URI")
             .unwrap_or_else(|_| "mongodb://localhost:27017/?directConnection=true".to_string())
             .as_str(), // Convert `String` to `&str` using `.as_str()`
-        "rustest", // This is already a `&str`, so no change needed
+        "polling_application", // This is already a `&str`, so no change needed
     );
 
     // Set up shared state and repositories.
