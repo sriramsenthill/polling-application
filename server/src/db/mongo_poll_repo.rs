@@ -34,6 +34,19 @@ impl PollRepository for MongoPollRepo {
     ) -> Result<VotingPoll, Box<dyn std::error::Error>> {
         println!("Creating Poll: {:#?}", poll);
 
+        // Check if a poll with the same ID already exists
+        if let Some(_) = self
+            .collection
+            .find_one(doc! { "poll_id": &poll.poll_id }, None)
+            .await?
+        {
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                "Poll ID already exists. Try creating a poll with a different ID.",
+            )));
+        }
+
+        // Insert the new poll
         self.collection.insert_one(&poll, None).await.map_err(|e| {
             eprintln!("Error inserting poll: {}", e);
             e
@@ -97,6 +110,7 @@ impl PollRepository for MongoPollRepo {
         option_id: i64,
         username: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        println!("Doing the voting{}", option_id);
         let filter = doc! { "poll_id": poll_id, "status": "active" };
         let update = doc! {
             "$inc": { "options.$[elem].votes": 1 },

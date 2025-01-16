@@ -12,6 +12,7 @@ use serde::Deserialize;
 use serde_json::json;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
+use tracing::info;
 
 // Helper function to handle errors and log them consistently
 fn internal_server_error<T: ToString>(err: T) -> HttpResponse {
@@ -22,7 +23,7 @@ fn internal_server_error<T: ToString>(err: T) -> HttpResponse {
 // Add a new poll
 #[post("/polls")]
 pub async fn add_polls(db: Data<dyn PollRepository>, request: Json<VotingPoll>) -> HttpResponse {
-    println!("Received Poll Data: {:#?}", request);
+    info!("Received Poll Data: {:#?}", request);
     match db.create_poll(request.into_inner()).await {
         Ok(poll) => HttpResponse::Ok().json(poll),
         Err(err) => internal_server_error(err),
@@ -64,6 +65,7 @@ pub async fn cast_vote(
         option_id,
         username,
     } = query.into_inner();
+
     let poll_id = path.into_inner();
     let vote = Votes { poll_id, option_id };
 
@@ -151,8 +153,24 @@ pub async fn poll_results(
 #[delete("/polls/{poll_id}")]
 pub async fn delete_poll(db: Data<dyn PollRepository>, path: Path<i64>) -> HttpResponse {
     let poll_id = path.into_inner();
-    match db.delete_poll(poll_id).await {
-        Ok(_) => HttpResponse::Ok().body("Poll deleted successfully"),
-        Err(err) => internal_server_error(err),
+
+    // Check if the poll exists in the database
+    match db.get_poll(poll_id).await {
+        Ok(Some(_)) => {
+            // Proceed to delete the poll if it exists
+            match db.delete_poll(poll_id).await {
+                Ok(_) => HttpResponse::Ok().body("Poll deleted successfully"),
+                Err(err) => internal_server_error(err),
+            }
+        }
+        Ok(None) => {
+            // Poll ID not found in the database
+            HttpResponse::NotFound()
+                .body("Poll not found. It might have been deleted or never created.")
+        }
+        Err(err) => {
+            // Error occurred while checking for poll existence
+            internal_server_error(err)
+        }
     }
 }
