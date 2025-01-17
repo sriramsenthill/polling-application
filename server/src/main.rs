@@ -49,12 +49,20 @@ async fn api_handler() -> impl Responder {
 
 /// Configure WebAuthn.
 fn setup_webauthn() -> Data<Webauthn> {
-    let rp_id = "localhost";
-    let rp_origin = Url::parse("http://localhost:3000").expect("Invalid URL");
-    let webauthn = WebauthnBuilder::new(rp_id, &rp_origin)
+    // Read environment variables or use default values.
+    let rp_id = std::env::var("WEBAUTHN_ID").unwrap_or_else(|_| "localhost".to_string());
+    let rp_origin =
+        std::env::var("WEBAUTHN_ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
+
+    // Parse the origin URL.
+    let parsed_origin = Url::parse(&rp_origin).expect("Invalid URL for WebAuthn origin");
+
+    // Build the WebAuthn instance.
+    let webauthn = WebauthnBuilder::new(&rp_id, &parsed_origin)
         .expect("Invalid WebAuthn configuration")
         .build()
         .expect("Failed to initialize WebAuthn");
+
     Data::new(webauthn)
 }
 
