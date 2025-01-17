@@ -7,6 +7,7 @@ use actix_web::{
 };
 use api::handler::auth_routes::{authentication, registration};
 use dotenv::dotenv;
+use log::info;
 use std::env;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -42,7 +43,7 @@ async fn root_handler() -> impl Responder {
 }
 
 /// Basic API endpoint for testing.
-#[get("/api")]
+#[get(" /api")]
 async fn api_handler() -> impl Responder {
     HttpResponse::Ok().json("API is running.")
 }
@@ -51,12 +52,15 @@ async fn api_handler() -> impl Responder {
 fn setup_webauthn() -> Data<Webauthn> {
     // Read environment variables or use default values.
     let rp_id = std::env::var("WEBAUTHN_ID").unwrap_or_else(|_| "localhost".to_string());
+    info!("{}", rp_id);
     let rp_origin =
         std::env::var("WEBAUTHN_ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
 
+    info!("{}", rp_origin);
     // Parse the origin URL.
     let parsed_origin = Url::parse(&rp_origin).expect("Invalid URL for WebAuthn origin");
 
+    info!("{}", parsed_origin);
     // Build the WebAuthn instance.
     let webauthn = WebauthnBuilder::new(&rp_id, &parsed_origin)
         .expect("Invalid WebAuthn configuration")

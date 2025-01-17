@@ -8,10 +8,10 @@ export default function Login() {
     const { username, setUsername, handleLogin, isLoading } = useLogin();
 
     return (
-        <div className="w-full h-[80dvh] flex justify-center items-center">
+        <div className="w-screen h-screen flex justify-center items-center">
             <div className="w-fit max-w-md p-6 rounded-xl transition-all bg-white shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] h-[20rem] flex flex-col items-start justify-center gap-[15px]">
                 <div className="flex flex-col gap-[5px]">
-                    <h1 className="font-sans text-lg font-semibold text-gray-800">Login Here.</h1>
+                    <h1 className="font-satoshi font-bold text-lg text-gray-800">Login Here.</h1>
                     <p className="text-xs">Welcome Back, Change Awaits</p>
                 </div>
                 <input
@@ -40,6 +40,4 @@ export default function Login() {
         </div>
 
     );
-
-
 }

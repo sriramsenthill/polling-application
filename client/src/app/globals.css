@@ -1,3 +1,35 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* globals.css */
+
+@font-face {
+    font-family: 'Satoshi';
+    src: url('/fonts/Satoshi-Light.otf') format('opentype'),
+        url('/fonts/Satoshi-Bold.otf') format('opentype');
+    font-weight: 300;
+    /* Light */
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Satoshi';
+    src: url('/fonts/Satoshi-Medium.otf') format('opentype');
+    font-weight: 500;
+    /* Medium */
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Satoshi';
+    src: url('/fonts/Satoshi-Bold.otf') format('opentype');
+    font-weight: 700;
+    /* Bold */
+    font-style: normal;
+}
+
+/* Fallback in case the font is not available */
+body {
+    font-family: 'Satoshi', 'Helvetica Neue', sans-serif;
+}
