@@ -57,18 +57,31 @@ export default function NavigationBar() {
                     )}
                 </div>
 
-                {!username ? (
+                {!username && (
                     <div className="flex items-center space-x-6">
-                        <Link href="/register">
-                            <span className={`text-[#55525d] ${pathname === '/register' ? 'font-bold' : 'font-medium'} text-xs sm:text-xs md:text-sm lg:text-base font-satoshi hover:opacity-90 transition-all`}>
-                                Register
-                            </span>
-                        </Link>
-                        <Button href="/login">Log in</Button>
+                        {pathname === '/register' ? (
+                            <>
+                                <Link href="/login">
+                                    <span className="text-[#55525d] text-xs sm:text-xs md:text-sm lg:text-base font-satoshi hover:opacity-90 transition-all">
+                                        Log in
+                                    </span>
+                                </Link>
+                                <Button href="/register">Register</Button>
+                            </>
+                        ) : (
+                            <>
+                                <Link href="/register">
+                                    <span className="text-[#55525d] text-xs sm:text-xs md:text-sm lg:text-base font-satoshi hover:opacity-90 transition-all">
+                                        Register
+                                    </span>
+                                </Link>
+                                <Button href="/login">Log in</Button>
+                            </>
+                        )}
                     </div>
-                ) : (
-                    <Button href="/" onClick={handleLogOut}>Log out</Button>
                 )}
+
+                {username && <Button href="/" onClick={handleLogOut}>Log out</Button>}
             </div>
         </nav>
     );
