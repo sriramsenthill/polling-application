@@ -29,6 +29,21 @@
     font-style: normal;
 }
 
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+*/
+
 /* Fallback in case the font is not available */
 body {
     font-family: 'Satoshi', 'Helvetica Neue', sans-serif;
