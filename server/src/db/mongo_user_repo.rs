@@ -62,20 +62,39 @@ impl UserRepository for MongoUserRepo {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let filter = doc! { "user_name": user_name.clone() };
 
+        // First, check if the user exists and get their current state
+        let user = self.collection.find_one(filter.clone(), None).await?;
+
+        if user.is_none() {
+            eprintln!("No user found with username: {}", user_name);
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "User not found",
+            )));
+        }
+
+        // Create update document based on whether polls_voted already exists
         let update = doc! {
-            "$push": {
-                "votes": bson::to_bson(&vote)?,
-                "polls_voted": vote.poll_id
+            "$set": {
+                "polls_voted": {
+                    "$cond": {
+                        "if": { "$eq": ["$polls_voted", null] },
+                        "then": [bson::to_bson(&vote)?],
+                        "else": {
+                            "$concatArrays": ["$polls_voted", [bson::to_bson(&vote)?]]
+                        }
+                    }
+                }
             }
         };
 
         let result = self.collection.update_one(filter, update, None).await?;
 
-        if result.matched_count == 0 {
-            eprintln!("No user found with username: {}", user_name);
+        if result.modified_count == 0 {
+            eprintln!("Failed to update user: {}", user_name);
             return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "User not found",
+                std::io::ErrorKind::Other,
+                "Failed to update user's voting history",
             )));
         }
 

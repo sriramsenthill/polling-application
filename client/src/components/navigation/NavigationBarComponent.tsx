@@ -56,8 +56,8 @@ export default function NavigationBar() {
                                         Manage polls
                                     </span>
                                 </Link>
-                                <Link href="/polls/new">
-                                    <span className={`text-[#55525d] text-sm hover:opacity-90 transition-all ${pathname === '/polls/new' ? 'font-bold' : 'font-medium'}`}>
+                                <Link href="/polls/create">
+                                    <span className={`text-[#55525d] text-sm hover:opacity-90 transition-all ${pathname === '/polls/create' ? 'font-bold' : 'font-medium'}`}>
                                         Create poll
                                     </span>
                                 </Link>

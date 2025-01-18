@@ -84,8 +84,8 @@ pub mod registration {
             user_id: user_unique_id.to_string(),
             user_name: username.clone(),
             keys: vec![passkey],
-            owned_polls: None,
-            polls_voted: None,
+            owned_polls: Some(Vec::new()), // Initialize with empty vector
+            polls_voted: Some(Vec::new()), // Initialize with empty vector
         };
 
         db.create_user(user)
