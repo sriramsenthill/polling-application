@@ -1,4 +1,5 @@
 use crate::models::poll_models::VotingPoll;
+use crate::models::poll_models::VotingPollInput;
 use async_trait::async_trait;
 
 /// A repository trait for managing polls.
@@ -14,8 +15,10 @@ pub trait PollRepository: Send + Sync {
     /// # Returns
     /// * `Ok(Poll)` - The created poll.
     /// * `Err` - An error if the creation fails.
-    async fn create_poll(&self, poll: VotingPoll)
-        -> Result<VotingPoll, Box<dyn std::error::Error>>;
+    async fn create_poll(
+        &self,
+        poll: VotingPollInput,
+    ) -> Result<VotingPoll, Box<dyn std::error::Error>>;
 
     /// Fetches all polls.
     ///

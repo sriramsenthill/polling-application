@@ -54,28 +54,35 @@ impl UserRepository for MongoUserRepo {
             }
         }
     }
+
     async fn update_user(
         &self,
         user_name: String,
         vote: Votes,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // Clone `user_name` to avoid moving it
         let filter = doc! { "user_name": user_name.clone() };
 
         let update = doc! {
-            "$push": { "votes": bson::to_bson(&vote)? }
+            "$push": {
+                "votes": bson::to_bson(&vote)?,
+                "polls_voted": vote.poll_id
+            }
         };
 
         let result = self.collection.update_one(filter, update, None).await?;
 
         if result.matched_count == 0 {
             eprintln!("No user found with username: {}", user_name);
-        } else {
-            println!(
-                "User '{}' updated successfully with vote: {:?}",
-                user_name, vote
-            );
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "User not found",
+            )));
         }
+
+        println!(
+            "User '{}' updated successfully with vote: {:?}",
+            user_name, vote
+        );
 
         Ok(())
     }
@@ -87,5 +94,25 @@ impl UserRepository for MongoUserRepo {
             eprintln!("No user found with ID: {}", user_id);
         }
         Ok(())
+    }
+
+    async fn has_voted(
+        &self,
+        user_name: String,
+        poll_id: i64,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+        let filter = doc! {
+            "user_name": user_name,
+            "votes": {
+                "$elemMatch": {
+                    "poll_id": poll_id
+                }
+            }
+        };
+
+        match self.collection.count_documents(filter, None).await {
+            Ok(count) => Ok(count > 0),
+            Err(e) => Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>),
+        }
     }
 }

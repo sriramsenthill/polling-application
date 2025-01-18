@@ -25,6 +25,7 @@ export const useLogin = () => {
             await Authentication(username);
             setUserSession(username);
             setMessage({ type: "success", text: "Successfully logged in." });
+            console.log("username is: ", username);
             router.push("/");
         } catch (error) {
             setMessage({ type: "error", text: "Error logging in. Please try again." });

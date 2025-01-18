@@ -17,7 +17,8 @@ pub struct PollOption {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VotingPoll {
     // Renamed from Poll to be more descriptive
-    pub poll_id: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub poll_id: Option<i64>,
     pub title: String,
     pub creator: String,
     pub description: String,
@@ -34,6 +35,20 @@ pub enum PollStatus {
     Active,
     Expired,
     Closed,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VotingPollInput {
+    pub title: String,
+    pub creator: String,
+    pub description: String,
+    pub expiration_date: Option<DateTime<Utc>>,
+    pub options: Vec<PollOptionInput>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PollOptionInput {
+    pub text: String,
 }
 
 /// A query for retrieving poll results

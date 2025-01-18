@@ -54,4 +54,10 @@ pub trait UserRepository: Send + Sync {
     /// * `Ok(())` - If the deletion is successful.
     /// * `Err` - An error if the deletion fails.
     async fn delete_user(&self, user_id: String) -> Result<(), Box<dyn std::error::Error>>;
+
+    async fn has_voted(
+        &self,
+        user_name: String,
+        poll_id: i64,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
 }

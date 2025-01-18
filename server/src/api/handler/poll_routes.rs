@@ -1,6 +1,6 @@
 use crate::db::poll_repository::PollRepository;
 use crate::db::user_repository::UserRepository;
-use crate::models::poll_models::{ResultsQuery, ServerEvents, VotingPoll};
+use crate::models::poll_models::{ResultsQuery, ServerEvents, VotingPoll, VotingPollInput};
 use crate::models::user_models::Votes;
 use actix_web::body::MessageBody;
 use actix_web::{
@@ -22,8 +22,12 @@ fn internal_server_error<T: ToString>(err: T) -> HttpResponse {
 
 // Add a new poll
 #[post("/polls")]
-pub async fn add_polls(db: Data<dyn PollRepository>, request: Json<VotingPoll>) -> HttpResponse {
+pub async fn add_polls(
+    db: Data<dyn PollRepository>,
+    request: Json<VotingPollInput>,
+) -> HttpResponse {
     info!("Received Poll Data: {:#?}", request);
+
     match db.create_poll(request.into_inner()).await {
         Ok(poll) => HttpResponse::Ok().json(poll),
         Err(err) => internal_server_error(err),
@@ -59,23 +63,42 @@ pub async fn cast_vote(
     db: Data<dyn PollRepository>,
     user_db: Data<dyn UserRepository>,
     path: Path<i64>,
-    query: Query<VoteOption>,
+    body: Json<VoteOption>,
 ) -> HttpResponse {
+    let poll_id = path.into_inner();
     let VoteOption {
         option_id,
         username,
-    } = query.into_inner();
+    } = body.into_inner();
 
-    let poll_id = path.into_inner();
+    // First check if user has already voted
+    match user_db.has_voted(username.clone(), poll_id).await {
+        Ok(true) => {
+            return HttpResponse::BadRequest().json(json!({
+                "error": "User has already voted in this poll"
+            }));
+        }
+        Ok(false) => {}
+        Err(err) => return internal_server_error(err),
+    }
+
+    // Create vote record
     let vote = Votes { poll_id, option_id };
 
+    // Update user's voting history
     if let Err(err) = user_db.update_user(username.clone(), vote).await {
         return internal_server_error(err);
     }
 
+    // Record the vote in the poll
     match db.vote_poll(poll_id, option_id, username).await {
-        Ok(_) => HttpResponse::Ok().body("Vote cast successfully"),
-        Err(err) => internal_server_error(err),
+        Ok(_) => HttpResponse::Ok().json(json!({
+            "message": "Vote cast successfully"
+        })),
+        Err(err) => {
+            // Note: In a production system, you might want to roll back the user update here
+            internal_server_error(err)
+        }
     }
 }
 
