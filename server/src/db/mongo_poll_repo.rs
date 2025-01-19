@@ -167,13 +167,13 @@ impl PollRepository for MongoPollRepo {
 
         let filter = doc! {
             "poll_id": poll_id,
-            "status": "active",
-            "users_voted": { "$ne": username.clone() }
+            "status": "Active",
+            "users_voted": { "$ne": &username } // Ensures the user hasn't already voted
         };
 
         let update = doc! {
-            "$inc": { "options.$[elem].votes": 1 },
-            "$push": { "users_voted": username.clone() }
+            "$inc": { "options.$[elem].votes": 1 }, // Increment the vote count for the selected option
+            "$push": { "users_voted": &username } // Add the username to the list of users who voted
         };
 
         let array_filters = vec![doc! { "elem.option_id": option_id }];

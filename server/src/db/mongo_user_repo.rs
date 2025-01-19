@@ -57,7 +57,7 @@ impl MongoUserRepo {
         let vote = Votes { poll_id, option_id };
 
         let update = doc! {
-            "$addToSet": { "polls_voted": bson::to_bson(&vote)? }
+            "$push": { "polls_voted": bson::to_bson(&vote)? }
         };
 
         let result = self.collection.update_one(filter, update, None).await?;
@@ -71,7 +71,7 @@ impl MongoUserRepo {
         }
 
         println!(
-            "User {} updated with new vote: Poll ID {}, Option ID {}",
+            "User {} updated successfully with vote: Poll ID {}, Option ID {}",
             username, poll_id, option_id
         );
         Ok(())
@@ -117,36 +117,23 @@ impl UserRepository for MongoUserRepo {
         user_name: String,
         vote: Votes,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let filter = doc! { "user_name": user_name.clone() };
+        // Define the filter to find the user by their username
+        let filter = doc! { "user_name": &user_name };
 
-        // First, check if the user exists and get their current state
-        let user = self.collection.find_one(filter.clone(), None).await?;
-
-        if user.is_none() {
-            eprintln!("No user found with username: {}", user_name);
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "User not found",
-            )));
-        }
-
-        // Create update document based on whether polls_voted already exists
+        // Use `$push` with `$ifNull` to append the vote or initialize the array
         let update = doc! {
-            "$set": {
+            "$push": {
                 "polls_voted": {
-                    "$cond": {
-                        "if": { "$eq": ["$polls_voted", null] },
-                        "then": [bson::to_bson(&vote)?],
-                        "else": {
-                            "$concatArrays": ["$polls_voted", [bson::to_bson(&vote)?]]
-                        }
-                    }
+                    "$each": [bson::to_bson(&vote)?],
+                    "$position": 0 // Optional: Add to the start of the array (most recent first)
                 }
             }
         };
 
+        // Update the user document
         let result = self.collection.update_one(filter, update, None).await?;
 
+        // Check if the update was successful
         if result.modified_count == 0 {
             eprintln!("Failed to update user: {}", user_name);
             return Err(Box::new(std::io::Error::new(

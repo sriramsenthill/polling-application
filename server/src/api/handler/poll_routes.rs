@@ -1,6 +1,8 @@
 use crate::db::poll_repository::PollRepository;
 use crate::db::user_repository::UserRepository;
-use crate::models::poll_models::{ResultsQuery, ServerEvents, VotingPoll, VotingPollInput};
+use crate::models::poll_models::{
+    ResultsQuery, ServerEvents, VoteRequest, VotingPoll, VotingPollInput,
+};
 use crate::models::user_models::Votes;
 use actix_web::body::MessageBody;
 use actix_web::{
@@ -51,53 +53,57 @@ pub async fn fetch_polls(db: Data<dyn PollRepository>, path: Path<i64>) -> HttpR
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct VoteOption {
-    option_id: i64,
-    username: String,
-}
-
 // Cast a vote
-#[post("/polls/{poll_id}/vote")]
+#[post("/polls/vote")]
 pub async fn cast_vote(
     db: Data<dyn PollRepository>,
     user_db: Data<dyn UserRepository>,
-    path: Path<i64>,
-    body: Json<VoteOption>,
+    body: Json<VoteRequest>,
 ) -> HttpResponse {
-    let poll_id = path.into_inner();
-    let VoteOption {
+    let VoteRequest {
+        poll_id,
         option_id,
         username,
     } = body.into_inner();
 
-    // First check if user has already voted
+    // Check if the user has already voted in this poll
     match user_db.has_voted(username.clone(), poll_id).await {
         Ok(true) => {
             return HttpResponse::BadRequest().json(json!({
                 "error": "User has already voted in this poll"
             }));
         }
-        Ok(false) => {}
-        Err(err) => return internal_server_error(err),
+        Ok(false) => {
+            // Proceed to cast the vote
+        }
+        Err(err) => {
+            return HttpResponse::InternalServerError().json(json!({
+                "error": format!("Failed to check voting history: {}", err)
+            }));
+        }
     }
 
-    // Create vote record
+    // Create a vote record for the user
     let vote = Votes { poll_id, option_id };
 
     // Update user's voting history
     if let Err(err) = user_db.update_user(username.clone(), vote).await {
-        return internal_server_error(err);
+        return HttpResponse::InternalServerError().json(json!({
+            "error": format!("Failed to update user's voting history: {}", err)
+        }));
     }
 
     // Record the vote in the poll
-    match db.vote_poll(poll_id, option_id, username).await {
+    match db.vote_poll(poll_id, option_id, username.clone()).await {
         Ok(_) => HttpResponse::Ok().json(json!({
             "message": "Vote cast successfully"
         })),
         Err(err) => {
-            // Note: In a production system, you might want to roll back the user update here
-            internal_server_error(err)
+            // If updating the poll fails, roll back the user's voting history
+
+            HttpResponse::InternalServerError().json(json!({
+                "error": format!("Failed to cast vote: {}", err)
+            }))
         }
     }
 }

@@ -46,6 +46,13 @@ pub struct VotingPollInput {
     pub options: Vec<PollOptionInput>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct VoteRequest {
+    pub poll_id: i64,
+    pub option_id: i64,
+    pub username: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PollOptionInput {
     pub text: String,
