@@ -1,3 +1,4 @@
+use crate::db::mongo_user_repo::MongoUserRepo;
 use crate::db::{db_config::DbConfig, poll_repository::PollRepository};
 use crate::models::poll_models::{PollOption, PollStatus, VotingPoll, VotingPollInput};
 
@@ -14,6 +15,7 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct MongoPollRepo {
     collection: Collection<VotingPoll>,
+    config: DbConfig, // Add this field
 }
 
 impl MongoPollRepo {
@@ -24,7 +26,10 @@ impl MongoPollRepo {
         let database = client.database(&config.database_name);
         let collection = database.collection("polls");
 
-        Ok(MongoPollRepo { collection })
+        Ok(MongoPollRepo {
+            collection,
+            config: config.clone(), // Initialize the config field
+        })
     }
 
     async fn get_next_poll_id(&self) -> Result<i64, Box<dyn std::error::Error>> {
@@ -78,13 +83,13 @@ impl PollRepository for MongoPollRepo {
         let poll = VotingPoll {
             poll_id: Some(next_id),
             title: poll_input.title,
-            creator: poll_input.creator,
+            creator: poll_input.creator.clone(),
             description: poll_input.description,
-            created_at: Utc::now(), // Server sets current time
+            created_at: Utc::now(),
             expiration_date: poll_input.expiration_date,
-            status: PollStatus::Active, // Always starts as Active
+            status: PollStatus::Active,
             options,
-            users_voted: Vec::new(), // Start with empty voters list
+            users_voted: Vec::new(),
         };
 
         // Insert the new poll
@@ -94,6 +99,13 @@ impl PollRepository for MongoPollRepo {
         })?;
 
         println!("Poll created successfully with ID: {}", next_id);
+
+        // Update the creator's owned_polls
+        let user_repo = MongoUserRepo::new(&self.config).await?;
+        user_repo
+            .add_owned_poll(&poll_input.creator, next_id)
+            .await?;
+
         Ok(poll)
     }
 
@@ -153,18 +165,15 @@ impl PollRepository for MongoPollRepo {
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Recording vote for option {}", option_id);
 
-        // Clone username for use in the filter
-        let username_for_filter = username.clone();
-
         let filter = doc! {
             "poll_id": poll_id,
             "status": "active",
-            "users_voted": { "$ne": username_for_filter } // Use cloned username here
+            "users_voted": { "$ne": username.clone() }
         };
 
         let update = doc! {
             "$inc": { "options.$[elem].votes": 1 },
-            "$push": { "users_voted": username } // Original username used here
+            "$push": { "users_voted": username.clone() }
         };
 
         let array_filters = vec![doc! { "elem.option_id": option_id }];
@@ -174,21 +183,21 @@ impl PollRepository for MongoPollRepo {
 
         let result = self.collection.update_one(filter, update, options).await?;
 
-        match result.matched_count {
-            0 => {
-                eprintln!("No matching poll found or user has already voted.");
-                return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::PermissionDenied,
-                    "Poll not found or user has already voted",
-                )));
-            }
-            _ => {
-                println!(
-                    "Vote for poll ID {} and option ID {} recorded successfully.",
-                    poll_id, option_id
-                );
-            }
+        if result.matched_count == 0 {
+            eprintln!("No matching poll found or user has already voted.");
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "Poll not found or user has already voted",
+            )));
         }
+
+        println!("Vote recorded successfully for poll ID {}.", poll_id);
+
+        // Update the user's polls_voted field
+        let user_repo = MongoUserRepo::new(&self.config).await?;
+        user_repo
+            .add_vote_to_user(&username, poll_id, option_id)
+            .await?;
 
         Ok(())
     }

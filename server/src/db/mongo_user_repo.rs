@@ -19,6 +19,63 @@ impl MongoUserRepo {
 
         Ok(MongoUserRepo { collection })
     }
+
+    pub async fn add_owned_poll(
+        &self,
+        username: &str,
+        poll_id: i64,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let filter = doc! { "user_name": username };
+        let update = doc! {
+            "$addToSet": { "owned_polls": poll_id }
+        };
+
+        let result = self.collection.update_one(filter, update, None).await?;
+
+        if result.matched_count == 0 {
+            eprintln!("User {} not found to update owned polls.", username);
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "User not found",
+            )));
+        }
+
+        println!(
+            "User {} updated with new owned poll ID: {}",
+            username, poll_id
+        );
+        Ok(())
+    }
+
+    pub async fn add_vote_to_user(
+        &self,
+        username: &str,
+        poll_id: i64,
+        option_id: i64,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let filter = doc! { "user_name": username };
+        let vote = Votes { poll_id, option_id };
+
+        let update = doc! {
+            "$addToSet": { "polls_voted": bson::to_bson(&vote)? }
+        };
+
+        let result = self.collection.update_one(filter, update, None).await?;
+
+        if result.matched_count == 0 {
+            eprintln!("User {} not found to update polls voted.", username);
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "User not found",
+            )));
+        }
+
+        println!(
+            "User {} updated with new vote: Poll ID {}, Option ID {}",
+            username, poll_id, option_id
+        );
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]
