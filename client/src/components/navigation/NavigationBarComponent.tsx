@@ -47,20 +47,26 @@ export default function NavigationBar() {
                             className="font-satoshi font-bold text-[#55525d] lg:text-2xl md:text-xl text-sm cursor-pointer"
                             href="/"
                         >
-                            polling app
+                            voting app
                         </Link>
                         {username && (
                             <div className="flex items-center space-x-6">
-                                <Link href="/polls/manage">
-                                    <span className={`text-[#55525d] text-sm hover:opacity-90 transition-all ${pathname === '/polls/manage' ? 'font-bold' : 'font-medium'}`}>
-                                        Manage polls
-                                    </span>
-                                </Link>
                                 <Link href="/polls/create">
                                     <span className={`text-[#55525d] text-sm hover:opacity-90 transition-all ${pathname === '/polls/create' ? 'font-bold' : 'font-medium'}`}>
                                         Create poll
                                     </span>
                                 </Link>
+                                <Link href="/polls/manage">
+                                    <span className={`text-[#55525d] text-sm hover:opacity-90 transition-all ${pathname === '/polls/manage' ? 'font-bold' : 'font-medium'}`}>
+                                        Manage polls
+                                    </span>
+                                </Link>
+                                <Link href="/polls/vote">
+                                    <span className={`text-[#55525d] text-sm hover:opacity-90 transition-all ${pathname === '/polls/vote' ? 'font-bold' : 'font-medium'}`}>
+                                        Vote polls
+                                    </span>
+                                </Link>
+
                             </div>
                         )}
                     </div>
