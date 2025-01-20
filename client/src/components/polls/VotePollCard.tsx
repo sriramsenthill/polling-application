@@ -59,9 +59,23 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
                 setIsModalOpen(false);
                 router.push('/'); // Redirect to home page
             }, 2000);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error submitting vote:', error);
-            setModalMessage(`Failed to submit vote: ${error}`);
+
+            if (error.response) {
+                if (error.response.status === 404) {
+                    setModalMessage('Poll not found.');
+                } else if (error.response.status === 400) {
+                    setModalMessage('You have already voted on this poll.');
+                } else if (error.response.status === 500) {
+                    setModalMessage('You have already voted on this poll.');
+                } else {
+                    setModalMessage('An unexpected error occurred. Please try again later.');
+                }
+            } else {
+                setModalMessage('Failed to submit vote.');
+            }
+
             setIsSuccess(false);
             setIsModalOpen(true);
 
@@ -69,7 +83,6 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
         }
     };
 
-    // Conditional styling for poll status
     const statusStyles =
         poll.status === 'Active'
             ? 'text-green-600 bg-green-200'
@@ -106,9 +119,6 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
                             }`}
                     >
                         <p className="text-sm">{option.text}</p>
-                        <span className="text-xs">
-                            {option.votes} votes
-                        </span>
                     </button>
                 ))}
             </div>
@@ -131,8 +141,7 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
             {/* Modal */}
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <div
-                    className={`p-20 text-center font-bold rounded-2    xl ${isSuccess ? ' text-green-700' : ' text-red-700'
-                        }`}
+                    className={`p-20 text-center font-bold rounded-xl ${isSuccess ? 'text-green-700' : 'text-red-700'}`}
                 >
                     {modalMessage}
                 </div>

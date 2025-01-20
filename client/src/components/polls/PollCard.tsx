@@ -31,6 +31,9 @@ interface PollCardProps {
 const PollCard: React.FC<PollCardProps> = ({ poll, buttonLabel, buttonAction }) => {
     const router = useRouter();
 
+    // Calculate the total votes to determine the percentage
+    const totalVotes = poll.options.reduce((acc, option) => acc + option.votes, 0);
+
     // Conditional styling for poll status
     const statusStyles =
         poll.status === 'Active'
@@ -38,7 +41,7 @@ const PollCard: React.FC<PollCardProps> = ({ poll, buttonLabel, buttonAction }) 
             : 'text-red-600 bg-red-100';
 
     return (
-        <div className="flex flex-col gap-4 bg-white/50 rounded-2xl p-6 w-full max-w-sm ">
+        <div className="flex flex-col gap-4 bg-white/50 rounded-2xl p-6 w-full max-w-sm">
             {/* Title and Status */}
             <div className="flex flex-col gap-2">
                 <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusStyles}`}>
@@ -51,24 +54,46 @@ const PollCard: React.FC<PollCardProps> = ({ poll, buttonLabel, buttonAction }) 
             </div>
 
             {/* Description */}
-            <p className="text-sm text-gray-600 break-words bg-white rounded-2xl p-4 h-24 ">
+            <p className="text-sm text-gray-600 break-words bg-white rounded-2xl p-4 h-24">
                 {poll.description}
             </p>
 
-            {/* Options */}
+            {/* Options with dynamic progress bars */}
             <div className="flex flex-col gap-3 bg-white rounded-2xl p-4 h-32 overflow-auto">
                 <h3 className="text-base font-bold text-gray-700">Options:</h3>
-                {poll.options.map((option) => (
-                    <div
-                        key={option.option_id}
-                        className="flex justify-between items-center p-2 bg-gray-100 rounded-lg shadow-sm"
-                    >
-                        <p className="text-sm text-gray-700">{option.text}</p>
-                        <span className="text-xs text-gray-500">
-                            {option.votes} votes
-                        </span>
-                    </div>
-                ))}
+                {poll.options.map((option) => {
+                    const percentage = totalVotes > 0 ? (option.votes / totalVotes) * 100 : 0;
+                    return (
+                        <div
+                            key={option.option_id}
+                            className="relative flex justify-between items-center p-2 bg-gray-100 rounded-lg shadow-sm overflow-hidden"
+                            style={{
+                                borderRadius: '1rem', // Set rounded corners for the container
+                            }}
+                        >
+                            <div
+                                className="absolute inset-0 bg-gray-200 rounded-lg"
+                                style={{
+                                    borderRadius: '1rem',
+                                }}
+                            ></div>
+
+                            <div
+                                className="absolute inset-0 bg-custom-pink rounded-lg"
+                                style={{
+                                    width: `${percentage}%`,
+                                    borderRadius: '1rem',
+                                }}
+                            ></div>
+
+                            <div className="relative z-10 flex justify-between items-center w-full p-2">
+                                <p className="text-sm text-gray-700">{option.text}</p>
+                                <span className="text-xs text-gray-500">{option.votes} votes</span>
+                            </div>
+                        </div>
+
+                    );
+                })}
             </div>
 
             {/* Additional Information */}
