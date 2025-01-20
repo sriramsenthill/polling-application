@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import axiosInstance from '@/utils/axiosInstance';
 import { useRouter } from 'next/navigation';
 import Button from '../Button';
+import Modal from '../Modal';
 
 interface PollOption {
     option_id: number;
@@ -29,12 +30,17 @@ interface VotePollCardProps {
 }
 
 const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
-    const [selectedOption, setSelectedOption] = useState<number | null>(null); // Track selected option
+    const [selectedOption, setSelectedOption] = useState<number | null>(null);
+    const [modalMessage, setModalMessage] = useState<string | null>(null);
+    const [isSuccess, setIsSuccess] = useState<boolean>(true);
+    const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const router = useRouter();
 
     const handleVote = async () => {
         if (selectedOption === null) {
-            alert('Please select an option to vote.');
+            setModalMessage('Please select an option to vote.');
+            setIsSuccess(false);
+            setIsModalOpen(true);
             return;
         }
 
@@ -45,11 +51,21 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
                 option_id: selectedOption,
             });
 
-            alert('Vote submitted successfully!');
-            router.push('/'); // Redirect to home screen
+            setModalMessage('Vote submitted successfully!');
+            setIsSuccess(true);
+            setIsModalOpen(true);
+
+            setTimeout(() => {
+                setIsModalOpen(false);
+                router.push('/'); // Redirect to home page
+            }, 2000);
         } catch (error) {
             console.error('Error submitting vote:', error);
-            alert('Failed to submit vote.');
+            setModalMessage(`Failed to submit vote: ${error}`);
+            setIsSuccess(false);
+            setIsModalOpen(true);
+
+            setTimeout(() => setIsModalOpen(false), 2000);
         }
     };
 
@@ -111,6 +127,16 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
 
             {/* Vote Button */}
             <Button onClick={handleVote}>Vote</Button>
+
+            {/* Modal */}
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+                <div
+                    className={`p-20 text-center font-bold rounded-2    xl ${isSuccess ? ' text-green-700' : ' text-red-700'
+                        }`}
+                >
+                    {modalMessage}
+                </div>
+            </Modal>
         </div>
     );
 };
