@@ -79,13 +79,13 @@ export default function NavigationBar() {
                             >
                                 Register
                             </button>
-                            <Button href="/" onClick={() => handleAuthClick('login')}>
+                            <Button onClick={() => handleAuthClick('login')}>
                                 Log in
                             </Button>
                         </div>
                     )}
 
-                    {username && <Button href="/" onClick={handleLogOut}>Log out</Button>}
+                    {username && <Button onClick={handleLogOut}>Log out</Button>}
                 </div>
             </nav>
 

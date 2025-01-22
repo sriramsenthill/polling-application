@@ -4,6 +4,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 use webauthn_rs::prelude::*;
 
+#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum StateError {
     #[error("State not found")]
@@ -17,7 +18,7 @@ pub struct RegistrationState {
     state_map: Mutex<HashMap<String, RegistrationData>>,
 }
 
-/// Data structure for registration state
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct RegistrationData {
     pub username: String,
@@ -26,6 +27,7 @@ pub struct RegistrationData {
     pub created_at: std::time::SystemTime,
 }
 
+#[allow(dead_code)]
 impl RegistrationState {
     /// Creates a new instance of `RegistrationState`
     pub fn new() -> Self {

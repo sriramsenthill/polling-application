@@ -5,40 +5,24 @@ import axiosInstance from '@/utils/axiosInstance';
 import { useRouter } from 'next/navigation';
 import Button from '../Button';
 import Modal from '../Modal';
-
-interface PollOption {
-    option_id: number;
-    text: string;
-    votes: number;
-}
-
-interface Poll {
-    poll_id: number;
-    title: string;
-    creator: string;
-    description: string;
-    created_at: string;
-    expiration_date: string;
-    status: string; // Can be "Active", "Closed", etc.
-    options: PollOption[];
-    users_voted: string[];
-}
+import { Poll } from '@/types/poll';
+import { AxiosError } from 'axios';
 
 interface VotePollCardProps {
     poll: Poll;
-    username: string; // Username of the logged-in user
+    username: string;
 }
 
 const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
-    const [modalMessage, setModalMessage] = useState<string | null>(null);
+    const [modalMessage, setModalMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
     const [isSuccess, setIsSuccess] = useState<boolean>(true);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const router = useRouter();
 
     const handleVote = async () => {
         if (selectedOption === null) {
-            setModalMessage('Please select an option to vote.');
+            setModalMessage({ type: 'error', text: 'Please select an option to vote.' });
             setIsSuccess(false);
             setIsModalOpen(true);
             return;
@@ -50,30 +34,22 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
                 username,
                 option_id: selectedOption,
             });
-
-            setModalMessage('Vote submitted successfully!');
+            setModalMessage({ type: 'success', text: 'Vote submitted successfully!' });
             setIsSuccess(true);
             setIsModalOpen(true);
 
             setTimeout(() => {
                 setIsModalOpen(false);
-                router.push('/'); // Redirect to home page
+                router.push('/');
             }, 2000);
-        } catch (error: any) {
-            console.error('Error submitting vote:', error);
-
-            if (error.response) {
-                if (error.response.status === 404) {
-                    setModalMessage('Poll not found.');
-                } else if (error.response.status === 400) {
-                    setModalMessage('You have already voted on this poll.');
-                } else if (error.response.status === 500) {
-                    setModalMessage('You have already voted on this poll.');
-                } else {
-                    setModalMessage('An unexpected error occurred. Please try again later.');
-                }
+        } catch (error: unknown) {
+            if (error instanceof AxiosError && error.response) {
+                setModalMessage({
+                    type: 'error',
+                    text: error.response?.data?.message || 'Failed to create poll.',
+                });
             } else {
-                setModalMessage('Failed to submit vote.');
+                setModalMessage({ type: 'error', text: 'Failed to submit vote.' });
             }
 
             setIsSuccess(false);
@@ -90,7 +66,6 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
 
     return (
         <div className="flex flex-col gap-4 bg-white/50 rounded-2xl p-6 w-full max-w-sm">
-            {/* Title and Status */}
             <div className="flex flex-col gap-2">
                 <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusStyles}`}>
                     {poll.status}
@@ -101,12 +76,10 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
                 </h2>
             </div>
 
-            {/* Description */}
             <p className="text-sm text-gray-600 break-words bg-white rounded-2xl p-4 h-24">
                 {poll.description}
             </p>
 
-            {/* Options */}
             <div className="flex flex-col gap-3 bg-white rounded-2xl p-4">
                 <h3 className="text-base font-bold text-gray-700">Options:</h3>
                 {poll.options.map((option) => (
@@ -123,7 +96,6 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
                 ))}
             </div>
 
-            {/* Additional Information */}
             <div className="flex flex-col text-xs text-gray-400 gap-3 bg-white/50 rounded-2xl pt-4 pb-3 px-4 cursor-pointer transition-[background-color] hover:bg-white">
                 <div className="flex justify-between">
                     <p>Created by</p>
@@ -135,15 +107,13 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
                 </div>
             </div>
 
-            {/* Vote Button */}
             <Button onClick={handleVote}>Vote</Button>
 
-            {/* Modal */}
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <div
                     className={`p-20 text-center font-bold rounded-xl ${isSuccess ? 'text-green-700' : 'text-red-700'}`}
                 >
-                    {modalMessage}
+                    {modalMessage?.text}
                 </div>
             </Modal>
         </div>

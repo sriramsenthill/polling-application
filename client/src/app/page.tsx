@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import axiosInstance from '@/utils/axiosInstance'; // Import your axios instance
-import PollCard from '@/components/polls/PollCard'; // Adjust the path as necessary
+import axiosInstance from '@/utils/axiosInstance';
+import PollCard from '@/components/polls/PollCard';
 import WelcomeComponent from '@/components/WelcomeComponent';
 import { useRouter } from 'next/navigation';
+import { Poll } from '@/types/poll';
 
 export default function Home() {
-  const [polls, setPolls] = useState([]);
+  const [polls, setPolls] = useState<Poll[]>([]);
   const router = useRouter();
 
-  // Update the handleVote function to use router.push
   const handleVote = (pollId: number) => {
     router.push(`/polls/vote/${pollId}`);
   };
@@ -30,20 +30,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start text-white">
-      {/* Welcome Component with constrained width */}
       <div className="w-full max-w-4xl px-4 py-6">
         <WelcomeComponent />
       </div>
 
-      {/* Poll Cards container */}
       <div className="w-full max-w-4xl px-4 py-6 flex flex-row justify-between gap-6 overflow-auto">
-        {/* Display Poll Cards */}
         {polls.map((poll) => (
           <PollCard
             key={poll.poll_id}
             poll={poll}
             buttonLabel="Vote"
-            buttonAction={() => handleVote(poll.poll_id)} // Pass the poll ID to handleVote
+            buttonAction={() => handleVote(poll.poll_id)}
           />
         ))}
       </div>

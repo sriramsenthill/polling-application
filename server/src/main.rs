@@ -1,15 +1,13 @@
-use actix_files::NamedFile;
 use actix_web::{
     get,
-    middleware::{self, Logger},
+    middleware::Logger,
     web::{self, Data, JsonConfig},
-    App, HttpRequest, HttpResponse, HttpServer, Responder,
+    App, HttpResponse, HttpServer, Responder,
 };
 use api::handler::auth_routes::{authentication, registration};
 use dotenv::dotenv;
 use log::info;
 use std::env;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use actix_cors::Cors;
@@ -20,7 +18,6 @@ mod db;
 mod models;
 
 // Auth route handlers
-use crate::api::handler::auth_routes;
 
 // Poll route handlers
 use crate::api::handler::poll_routes::{

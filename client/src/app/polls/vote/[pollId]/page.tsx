@@ -25,15 +25,15 @@ const PollVotePage = () => {
         fetchPoll();
     }, [pollId]);
 
-    if (!poll) {
-        return (<div className="min-h-screen flex flex-col items-center justify-center text-custom-gray">
-            Loading...
-        </div>);
-
+    if (!poll || !username) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center text-custom-gray">
+                Loading...
+            </div>
+        );
     }
 
     return (
-
         <div className="min-h-screen flex flex-col items-center justify-center text-custom-gray">
             <VotePollCard poll={poll} username={username} />
         </div>

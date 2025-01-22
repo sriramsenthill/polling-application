@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Authentication, LogOut, Registration } from "@/services/authService";
+import { Authentication, Registration } from "@/services/authService";
 import { useUserStore } from "@/store/userStore";
-import _ from "lodash";
 
 export const useLogin = () => {
     const [username, setUsername] = useState("");
@@ -12,7 +11,7 @@ export const useLogin = () => {
     const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
     const router = useRouter();
-    const { setUserSession, resetUserSession } = useUserStore((state) => state);
+    const { setUserSession } = useUserStore((state) => state);
 
     const handleLogin = async () => {
         if (!username.trim()) {
@@ -28,11 +27,16 @@ export const useLogin = () => {
             console.log("username is: ", username);
             router.push("/");
         } catch (error) {
-            setMessage({ type: "error", text: "Error logging in. Please try again." });
+            if (error instanceof Error) {
+                setMessage({ type: "error", text: `Error: ${error.message}` });
+            } else {
+                setMessage({ type: "error", text: "Error logging in. Please try again." });
+            }
         } finally {
             setIsLoading(false);
         }
     };
+
 
     const handleRegister = async () => {
         if (!username.trim()) {
@@ -47,7 +51,9 @@ export const useLogin = () => {
                 setMessage({ type: "success", text: "Successfully registered." });
             }
         } catch (error) {
-            setMessage({ type: "error", text: "Error registering. Please try again." });
+            if (error instanceof Error) {
+                setMessage({ type: "error", text: `Error: ${error.message}` });
+            }
         } finally {
             setIsLoading(false);
         }

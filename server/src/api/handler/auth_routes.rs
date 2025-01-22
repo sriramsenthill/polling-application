@@ -1,12 +1,10 @@
 use actix_web::{
-    error::ErrorInternalServerError,
     post,
     web::{Data, Json, Path},
     HttpResponse,
 };
 use log::{error, info};
-use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde::Serialize;
 use uuid::Uuid;
 use webauthn_rs::prelude::*;
 
@@ -24,12 +22,6 @@ struct AuthenticationResponse {
     token: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct RegistrationRequest {
-    username: String,
-}
-
-/// WebAuthn registration endpoints
 pub mod registration {
     use super::*;
 
@@ -84,8 +76,8 @@ pub mod registration {
             user_id: user_unique_id.to_string(),
             user_name: username.clone(),
             keys: vec![passkey],
-            owned_polls: Some(Vec::new()), // Initialize with empty vector
-            polls_voted: Some(Vec::new()), // Initialize with empty vector
+            owned_polls: Some(Vec::new()),
+            polls_voted: Some(Vec::new()),
         };
 
         db.create_user(user)
@@ -111,7 +103,7 @@ pub mod authentication {
         info!("Starting authentication for user: {}", username);
 
         // Clean up any existing auth state
-        auth_state_store.remove("auth_state".to_string()).await;
+        let _ = auth_state_store.remove("auth_state".to_string()).await;
 
         let user = db
             .get_user(username.to_string())

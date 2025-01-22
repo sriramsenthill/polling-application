@@ -3,13 +3,15 @@
 import React, { useEffect, useState } from 'react';
 import axiosInstance from '@/utils/axiosInstance';
 import { useUserStore } from '@/store/userStore';
-import PollCard from '@/components/polls/PollCard'; // Assuming you already have a PollCard component
-import Modal from '@/components/Modal'; // Assuming the Modal component is available
+import PollCard from '@/components/polls/PollCard';
+import Modal from '@/components/Modal';
+import { Poll } from '@/types/poll';
+
 
 function Page() {
     const { username } = useUserStore((state) => state);
 
-    const [polls, setPolls] = useState<any[]>([]);
+    const [polls, setPolls] = useState<Poll[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalMessage, setModalMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
     const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
@@ -19,13 +21,19 @@ function Page() {
     useEffect(() => {
         const fetchPolls = async () => {
             try {
-                const response = await axiosInstance.get('api/polls/0'); // Fetch polls
-                const userPolls = response.data.filter((poll: any) => poll.creator === username); // Filter polls by logged-in user
+                const response = await axiosInstance.get('api/polls/0');
+                const userPolls = response.data.filter((poll: Poll) => poll.creator === username);
                 setPolls(userPolls);
-                setLoading(false);
             } catch (error) {
-                setModalMessage({ type: 'error', text: 'Failed to fetch polls.' });
+                if (error instanceof Error) {
+                    console.error('Error fetching polls:', error.message);
+                    setModalMessage({ type: 'error', text: 'Failed to fetch polls.' });
+                } else {
+                    console.error('An unknown error occurred:', error);
+                    setModalMessage({ type: 'error', text: 'An unexpected error occurred.' });
+                }
                 setIsMessageModalOpen(true);
+            } finally {
                 setLoading(false);
             }
         };
@@ -37,28 +45,21 @@ function Page() {
         if (pollToDelete !== null) {
             try {
                 await axiosInstance.delete(`api/polls/${pollToDelete}`);
-                setPolls(polls.filter((poll) => poll.poll_id !== pollToDelete)); // Remove the deleted poll from the list
+                setPolls((prev) => prev.filter((poll) => poll.poll_id !== pollToDelete));
                 setModalMessage({ type: 'success', text: 'Poll deleted successfully!' });
             } catch (error) {
-                setModalMessage({ type: 'error', text: 'Failed to delete poll.' });
+                if (error instanceof Error) {
+                    const message = error.message || 'Failed to delete poll.';
+                    console.error('Error deleting poll:', message);
+                    setModalMessage({ type: 'error', text: message });
+                } else {
+                    setModalMessage({ type: 'error', text: 'An unexpected error occurred.' });
+                }
             } finally {
                 setIsMessageModalOpen(true);
-                setTimeout(() => {
-                    setIsMessageModalOpen(false);
-                }, 2000);
-                setIsConfirmModalOpen(false); // Close confirmation modal
+                setIsConfirmModalOpen(false);
             }
         }
-    };
-
-    const handleOpenConfirmModal = (pollId: number) => {
-        setPollToDelete(pollId);
-        setIsConfirmModalOpen(true);
-    };
-
-    const handleCloseConfirmModal = () => {
-        setPollToDelete(null);
-        setIsConfirmModalOpen(false);
     };
 
     return (
@@ -67,55 +68,53 @@ function Page() {
                 <h1 className="text-2xl font-bold text-gray-800">Manage Your Polls</h1>
 
                 {loading ? (
-                    <p>Loading...</p>
+                    <div className="flex justify-center items-center min-h-[10rem]">
+                        <p className="text-gray-700">Loading polls...</p>
+                    </div>
                 ) : (
                     <div className="flex flex-wrap gap-4">
                         {polls.map((poll) => (
-                            <div key={poll.poll_id} className="relative">
-                                <PollCard
-                                    key={poll.poll_id}
-                                    poll={poll}
-                                    buttonLabel="Delete"
-                                    buttonAction={() => handleOpenConfirmModal(poll.poll_id)}
-                                />
-                            </div>
+                            <PollCard
+                                key={poll.poll_id}
+                                poll={poll}
+                                buttonLabel="Delete"
+                                buttonAction={() => {
+                                    setPollToDelete(poll.poll_id);
+                                    setIsConfirmModalOpen(true);
+                                }}
+                            />
                         ))}
                     </div>
                 )}
             </div>
 
             {/* Confirmation Modal */}
-            {isConfirmModalOpen && (
-                <Modal isOpen={isConfirmModalOpen} onClose={handleCloseConfirmModal}>
-                    <div className="p-6 text-center">
-                        <p className="text-lg font-semibold text-gray-800 mb-4">
-                            Are you sure you want to delete this poll?
-                        </p>
-                        <div className="flex justify-center gap-4">
-                            <button
-                                onClick={handleDelete}
-                                className="px-4 py-2 bg-custom-pink text-white rounded-lg hover:bg-pink-800"
-                            >
-                                Yes, Delete
-                            </button>
-                            <button
-                                onClick={handleCloseConfirmModal}
-                                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-                            >
-                                No, Cancel
-                            </button>
-                        </div>
+            <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)}>
+                <div className="p-6 text-center">
+                    <p className="text-lg font-semibold text-gray-800 mb-4">
+                        Are you sure you want to delete this poll?
+                    </p>
+                    <div className="flex justify-center gap-4">
+                        <button
+                            onClick={handleDelete}
+                            className="px-4 py-2 bg-custom-pink text-white rounded-lg hover:bg-pink-800"
+                        >
+                            Yes, Delete
+                        </button>
+                        <button
+                            onClick={() => setIsConfirmModalOpen(false)}
+                            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                        >
+                            No, Cancel
+                        </button>
                     </div>
-                </Modal>
-            )}
+                </div>
+            </Modal>
 
             {/* Message Modal */}
             {modalMessage && (
                 <Modal isOpen={isMessageModalOpen} onClose={() => setIsMessageModalOpen(false)}>
-                    <div
-                        className={`p-20 text-center rounded-xl ${modalMessage.type === 'success' ? 'text-green-700' : 'text-red-700'
-                            }`}
-                    >
+                    <div className={`p-6 text-center rounded-xl ${modalMessage.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
                         {modalMessage.text}
                     </div>
                 </Modal>

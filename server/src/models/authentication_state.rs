@@ -4,6 +4,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 use webauthn_rs::prelude::*;
 
+#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum StateError {
     #[error("State not found")]
@@ -17,7 +18,7 @@ pub struct AuthenticationState {
     state_map: Mutex<HashMap<String, AuthenticationData>>,
 }
 
-/// Data structure for authentication state
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct AuthenticationData {
     pub user_id: Uuid,
@@ -25,6 +26,7 @@ pub struct AuthenticationData {
     pub created_at: std::time::SystemTime,
 }
 
+#[allow(dead_code)]
 impl AuthenticationState {
     /// Creates a new instance of `AuthenticationState`
     pub fn new() -> Self {

@@ -6,6 +6,7 @@ import Button from '../Button';
 import Modal from '../Modal';
 import { useUserStore } from '@/store/userStore';
 import axiosInstance from '@/utils/axiosInstance';
+import { AxiosError } from 'axios';
 
 const CreatePoll: React.FC = () => {
     const router = useRouter();
@@ -41,7 +42,6 @@ const CreatePoll: React.FC = () => {
             return;
         }
 
-        // Convert expiration date to ISO 8601 format
         const formattedExpirationDate = new Date(expirationDate).toISOString();
 
         const pollData = {
@@ -64,11 +64,18 @@ const CreatePoll: React.FC = () => {
                 setIsModalOpen(false);
                 router.push('/');
             }, 2000);
-        } catch (error: any) {
-            setModalMessage({
-                type: 'error',
-                text: error.response?.data?.message || 'Failed to create poll.',
-            });
+        } catch (error: unknown) {
+            if (error instanceof AxiosError && error.response) {
+                setModalMessage({
+                    type: 'error',
+                    text: error.response?.data?.message || 'Failed to create poll.',
+                });
+            } else {
+                setModalMessage({
+                    type: 'error',
+                    text: 'Failed to create poll.',
+                });
+            }
             setIsModalOpen(true);
         } finally {
             setIsLoading(false);
@@ -133,11 +140,10 @@ const CreatePoll: React.FC = () => {
                 />
             </div>
 
-            <Button onClick={handleSubmit} disabled={isLoading}>
+            <Button onClick={handleSubmit}>
                 {isLoading ? 'Creating...' : 'Create Poll'}
             </Button>
 
-            {/* Modal */}
             {modalMessage && (
                 <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
                     <div

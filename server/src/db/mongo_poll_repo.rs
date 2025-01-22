@@ -4,13 +4,11 @@ use crate::models::poll_models::{PollOption, PollStatus, VotingPoll, VotingPollI
 
 use chrono::Utc;
 use futures::TryStreamExt;
-use mongodb::Database;
 use mongodb::{
     bson::doc,
     options::{ClientOptions, UpdateOptions},
     Client, Collection,
 };
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct MongoPollRepo {

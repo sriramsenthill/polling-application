@@ -1,8 +1,6 @@
 use crate::db::poll_repository::PollRepository;
 use crate::db::user_repository::UserRepository;
-use crate::models::poll_models::{
-    ResultsQuery, ServerEvents, VoteRequest, VotingPoll, VotingPollInput,
-};
+use crate::models::poll_models::{ResultsQuery, ServerEvents, VoteRequest, VotingPollInput};
 use crate::models::user_models::Votes;
 use actix_web::body::MessageBody;
 use actix_web::{
@@ -10,7 +8,6 @@ use actix_web::{
     web::{Data, Json, Path, Query},
     HttpResponse,
 };
-use serde::Deserialize;
 use serde_json::json;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;

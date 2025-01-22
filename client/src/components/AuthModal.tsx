@@ -68,7 +68,7 @@ export default function AuthModal({ mode, onClose, onSwitchMode }: AuthModalProp
                 {isLoading ? (
                     <p className="w-full text-xs text-center">Loading...</p>
                 ) : (
-                    <Button href="#" onClick={handleSubmit}>
+                    <Button onClick={handleSubmit}>
                         {mode === 'login' ? 'Login' : 'Register'}
                     </Button>
                 )}
