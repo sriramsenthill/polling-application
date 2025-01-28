@@ -42,7 +42,7 @@ const PollCard: React.FC<PollCardProps> = ({ poll, buttonLabel, buttonAction }) 
                     return (
                         <div
                             key={option.option_id}
-                            className="relative flex justify-between items-center p-2 bg-gray-100 rounded-lg shadow-sm overflow-hidden"
+                            className="relative flex justify-between items-center py-3 p-2 bg-gray-100 rounded-lg shadow-sm overflow-hidden"
                             style={{
                                 borderRadius: '1rem',
                             }}
@@ -63,7 +63,7 @@ const PollCard: React.FC<PollCardProps> = ({ poll, buttonLabel, buttonAction }) 
                             ></div>
 
                             <div className="relative z-10 flex justify-between items-center w-full p-2">
-                                <p className="text-sm text-gray-700">{option.text}</p>
+                                <p className={`${option.votes > 0 ? "text-white" : "text-gray-700"} text-sm `}>{option.text}</p>
                                 <span className="text-xs text-gray-500">{option.votes} votes</span>
                             </div>
                         </div>
