@@ -46,7 +46,7 @@ const VotePollCard: React.FC<VotePollCardProps> = ({ poll, username }) => {
             if (error instanceof AxiosError && error.response) {
                 setModalMessage({
                     type: 'error',
-                    text: error.response?.data?.message || 'Failed to create poll.',
+                    text: error.response?.data?.message || 'Failed to submit vote. User might have already submitted!',
                 });
             } else {
                 setModalMessage({ type: 'error', text: 'Failed to submit vote.' });

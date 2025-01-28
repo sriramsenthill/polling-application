@@ -5,10 +5,13 @@ import axiosInstance from '@/utils/axiosInstance';
 import { useUserStore } from '@/store/userStore';
 import PollCard from '@/components/polls/PollCard';
 import Modal from '@/components/Modal';
+import PollCardSkeleton from '@/components/polls/PollCardSkeleton';
 import { Poll } from '@/types/poll';
-
+import useAuthMiddleware from "@/middleware/authMiddleware";
 
 function Page() {
+    useAuthMiddleware();
+
     const { username } = useUserStore((state) => state);
 
     const [polls, setPolls] = useState<Poll[]>([]);
@@ -63,32 +66,35 @@ function Page() {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center text-custom-gray">
-            <div className="flex flex-col gap-4 bg-white/50 rounded-2xl p-6 max-w-3xl mx-auto">
-                <h1 className="text-2xl font-bold text-gray-800">Manage Your Polls</h1>
+        <div className="min-h-screen flex flex-col items-center justify-start px-6 text-white">
+            <h1 className="text-2xl font-bold text-gray-800">Manage Your Polls</h1>
 
-                {loading ? (
-                    <div className="flex justify-center items-center min-h-[10rem]">
-                        <p className="text-gray-700">Loading polls...</p>
-                    </div>
-                ) : (
-                    <div className="flex flex-wrap gap-4">
-                        {polls.map((poll) => (
-                            <PollCard
-                                key={poll.poll_id}
-                                poll={poll}
-                                buttonLabel="Delete"
-                                buttonAction={() => {
-                                    setPollToDelete(poll.poll_id);
-                                    setIsConfirmModalOpen(true);
-                                }}
-                            />
-                        ))}
-                    </div>
-                )}
-            </div>
+            {loading ? (
+                <div className="flex justify-center mt-3 items-center min-h-[10rem] gap-4">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                        <PollCardSkeleton key={`skeleton-${index}`} />
+                    ))}
+                </div>
+            ) : polls.length === 0 ? (
+                <div className="text-center text-gray-700">
+                    <p>Sorry, there are no polls for you to manage.</p>
+                </div>
+            ) : (
+                <div className="flex flex-wrap mt-3 gap-4">
+                    {polls.map((poll) => (
+                        <PollCard
+                            key={poll.poll_id}
+                            poll={poll}
+                            buttonLabel="Delete"
+                            buttonAction={() => {
+                                setPollToDelete(poll.poll_id);
+                                setIsConfirmModalOpen(true);
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
 
-            {/* Confirmation Modal */}
             <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)}>
                 <div className="p-6 text-center">
                     <p className="text-lg font-semibold text-gray-800 mb-4">
@@ -111,10 +117,12 @@ function Page() {
                 </div>
             </Modal>
 
-            {/* Message Modal */}
             {modalMessage && (
                 <Modal isOpen={isMessageModalOpen} onClose={() => setIsMessageModalOpen(false)}>
-                    <div className={`p-6 text-center rounded-xl ${modalMessage.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
+                    <div
+                        className={`p-6 text-center rounded-xl ${modalMessage.type === 'success' ? 'text-green-700' : 'text-red-700'
+                            }`}
+                    >
                         {modalMessage.text}
                     </div>
                 </Modal>

@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Button from '../Button';
 import { Poll } from '@/types/poll';
+import { useUserStore } from "@/store/userStore";
 
 interface PollCardProps {
     poll: Poll;
@@ -11,6 +12,12 @@ interface PollCardProps {
 }
 
 const PollCard: React.FC<PollCardProps> = ({ poll, buttonLabel, buttonAction }) => {
+    const { checkUserSession, username } = useUserStore((state) => state);
+    const isAuthenticated = !!username;
+
+    useEffect(() => {
+        checkUserSession();
+    }, [checkUserSession]);
 
     const totalVotes = poll.options.reduce((acc, option) => acc + option.votes, 0);
 
@@ -67,7 +74,6 @@ const PollCard: React.FC<PollCardProps> = ({ poll, buttonLabel, buttonAction }) 
                                 <span className="text-xs text-gray-500">{option.votes} votes</span>
                             </div>
                         </div>
-
                     );
                 })}
             </div>
@@ -83,8 +89,11 @@ const PollCard: React.FC<PollCardProps> = ({ poll, buttonLabel, buttonAction }) 
                 </div>
             </div>
 
-            <Button onClick={buttonAction}>
-                {buttonLabel}
+            <Button
+                onClick={buttonAction}
+                disabled={!isAuthenticated}
+            >
+                {!isAuthenticated ? 'Login to Vote' : buttonLabel}
             </Button>
         </div>
     );
