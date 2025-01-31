@@ -71,7 +71,7 @@ jobs:
 
             # Pull the latest Docker image from ECR
             echo "Pulling Docker image from ECR..."
-            docker pull "${{ secrets.ECR_REPOSITORY }}:latest"
+            sudo docker pull "${{ secrets.ECR_REPOSITORY }}:latest"
   
             # Stop and remove the previous container if it exists
             if [ "$(docker ps -aq -f name=app)" ]; then
@@ -82,7 +82,7 @@ jobs:
   
             # Run the Docker container
             echo "Running the Docker container..."
-            docker run -d --name app -p 8080:8080 \
+            sudo docker run -d --name app -p 8080:8080 \
               -e RUST_LOG="${{ secrets.RUST_LOG }}" \
               -e DATABASE_URI="${{ secrets.DATABASE_URI }}" \
               -e PORT="${{ secrets.PORT }}" \
