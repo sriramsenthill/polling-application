@@ -83,7 +83,14 @@ jobs:
   
             # Run the Docker container
             echo "Running the Docker container..."
-            docker run -d --name app -p 8080:8080 "${{ secrets.ECR_REPOSITORY }}:latest"
+            docker run -d --name app -p 8080:8080 \
+              -e RUST_LOG="${{ secrets.RUST_LOG }}" \
+              -e DATABASE_URI="${{ secrets.DATABASE_URI }}" \
+              -e PORT="${{ secrets.PORT }}" \
+              -e SECRET="${{ secrets.SECRET }}" \
+              -e WEBAUTHN_ID="${{ secrets.WEBAUTHN_ID }}" \
+              -e WEBAUTHN_ORIGIN="${{ secrets.WEBAUTHN_ORIGIN }}" \
+              "${{ secrets.ECR_REPOSITORY }}:latest"
   
             # Prune unused Docker images
             echo "Pruning unused Docker images..."
