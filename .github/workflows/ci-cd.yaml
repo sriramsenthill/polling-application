@@ -74,10 +74,10 @@ jobs:
             sudo docker pull "${{ secrets.ECR_REPOSITORY }}:latest"
   
             # Stop and remove the previous container if it exists
-            if [ "$(docker ps -aq -f name=app)" ]; then
+            if [ -n "$(sudo docker ps -aq -f name=app)" ]; then
                 echo "Stopping and removing the previous container..."
-                docker stop app
-                docker rm app
+                sudo docker stop app
+                sudo docker rm app
             fi
   
             # Run the Docker container
@@ -93,7 +93,7 @@ jobs:
   
             # Prune unused Docker images
             echo "Pruning unused Docker images..."
-            docker image prune -f
+            sudo docker image prune -f
   
             echo "Deployment to EC2 completed successfully."
   
