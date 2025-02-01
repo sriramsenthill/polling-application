@@ -67,7 +67,7 @@ jobs:
             sudo su
             echo "Authenticating Docker with ECR..."
             # Define the ECR repository URI
-            sudo aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
+            sudo aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
 
             # Pull the latest Docker image from ECR
             echo "Pulling Docker image from ECR..."
