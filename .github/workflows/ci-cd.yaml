@@ -1,0 +1,100 @@
+name: Build and Deploy to EC2 
+
+on:
+  push:
+    branches:
+      - devops
+
+jobs:
+  build-and-push-to-ecr:
+    name: Build and Push Docker Image to ECR
+    runs-on: ubuntu-latest
+
+  
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v1
+
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push Docker image
+        run: |
+          cd ./server
+          echo "Installing dependencies..."
+          
+          echo "Building Docker image..."
+          docker build -t server-image:latest -f ./Dockerfile .
+
+      - name: Tag Docker image for ECR
+        run: |
+          echo "Tagging Docker image for ECR..."
+          docker tag server-image:latest ${{ secrets.ECR_REPOSITORY }}:latest
+
+      - name: Push Docker image to ECR
+        run: |
+          echo "Pushing Docker image to ECR..."
+          docker push ${{ secrets.ECR_REPOSITORY }}:latest
+
+      
+
+
+
+  deploy-to-ec2:
+    name: Deploy Docker Container to EC2
+    needs: build-and-push-to-ecr
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy Server to EC2
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: 15.206.203.244
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          port: 22
+          script: |
+            sudo su
+            echo "Authenticating Docker with ECR..."
+            # Define the ECR repository URI
+            sudo aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
+
+            # Pull the latest Docker image from ECR
+            echo "Pulling Docker image from ECR..."
+            sudo docker pull "${{ secrets.ECR_REPOSITORY }}:latest"
+  
+            # Stop and remove the previous container if it exists
+            if [ -n "$(sudo docker ps -aq -f name=app)" ]; then
+                echo "Stopping and removing the previous container..."
+                sudo docker stop app
+                sudo docker rm app
+            fi
+  
+            # Run the Docker container
+            echo "Running the Docker container..."
+            sudo docker run -d --name app -p 8080:8080 \
+              -e RUST_LOG="${{ secrets.RUST_LOG }}" \
+              -e DATABASE_URI="${{ secrets.DATABASE_URI }}" \
+              -e PORT="${{ secrets.PORT }}" \
+              -e SECRET="${{ secrets.SECRET }}" \
+              -e WEBAUTHN_ID="${{ secrets.WEBAUTHN_ID }}" \
+              -e WEBAUTHN_ORIGIN="${{ secrets.WEBAUTHN_ORIGIN }}" \
+              "${{ secrets.ECR_REPOSITORY }}:latest"
+  
+            # Prune unused Docker images
+            echo "Pruning unused Docker images..."
+            sudo docker image prune -f
+  
+            echo "Deployment to EC2 completed successfully."
+  
+    

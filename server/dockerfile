@@ -1,0 +1,51 @@
+# Stage 1: Build the Rust application
+FROM rust:1.83-alpine3.20 AS builder
+
+WORKDIR /app
+
+# Install necessary dependencies for building the application
+RUN apk add --no-cache \
+    build-base \
+    perl \
+    pkgconfig \
+    libffi-dev \
+    musl-dev \
+    musl \
+    openssl-dev \
+    openssl-libs-static
+
+# Copy Cargo files and source code
+COPY Cargo.toml Cargo.lock ./
+COPY ./src ./src
+
+# Build the release version of the application
+RUN cargo build --release
+
+# Stage 2: Create the minimal runtime image
+FROM scratch 
+
+WORKDIR /app
+
+# Environment variables
+ARG RUST_LOG
+ARG DATABASE_URI
+ARG PORT
+ARG SECRET
+ARG WEBAUTHN_ID
+ARG WEBAUTHN_ORIGIN
+
+ENV RUST_LOG=$RUST_LOG
+ENV DATABASE_URI=$DATABASE_URI
+ENV PORT=$PORT
+ENV SECRET=$SECRET
+ENV WEBAUTHN_ID=$WEBAUTHN_ID
+ENV WEBAUTHN_ORIGIN=$WEBAUTHN_ORIGIN
+
+# Copy the compiled binary from the builder stage
+COPY --from=builder /app/target/release/server /app/my-rust-app
+
+# Expose the port the app will listen on
+EXPOSE 8080
+
+# Command to run the application
+CMD ["/app/my-rust-app"]
