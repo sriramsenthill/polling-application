@@ -6,9 +6,31 @@ on:
       - devops
 
 jobs:
+
+  notify-discord:
+    name: Notify Discord on Push & PR Merge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Notification to Discord
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          args: |
+            🚀 **GitHub Notification**
+            - **Event:** `${{ github.event_name }}`
+            - **Branch:** `${{ github.ref }}`
+            - **Commit:** `${{ github.event.head_commit.id || github.event.pull_request.head.sha }}`
+            - **Author:** `${{ github.event.pusher.name || github.event.pull_request.user.login }}`
+            - **Message:** `${{ github.event.head_commit.message || github.event.pull_request.title }}`
+            - **Triggered by:** `${{ github.actor }}`
+  
+
   build-and-push-to-ecr:
     name: Build and Push Docker Image to ECR
     runs-on: ubuntu-latest
+
+  
 
     steps:
       - name: Checkout code
@@ -30,6 +52,7 @@ jobs:
         run: |
           cd ./server
           echo "Installing dependencies..."
+          
           echo "Building Docker image..."
           docker build -t server-image:latest -f ./Dockerfile .
 
@@ -42,6 +65,10 @@ jobs:
         run: |
           echo "Pushing Docker image to ECR..."
           docker push ${{ secrets.ECR_REPOSITORY }}:latest
+
+      
+
+
 
   deploy-to-ec2:
     name: Deploy Docker Container to EC2
@@ -59,16 +86,21 @@ jobs:
           script: |
             sudo su
             echo "Authenticating Docker with ECR..."
+            # Define the ECR repository URI
             sudo aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
+
+            # Pull the latest Docker image from ECR
             echo "Pulling Docker image from ECR..."
             sudo docker pull "${{ secrets.ECR_REPOSITORY }}:latest"
-
+  
+            # Stop and remove the previous container if it exists
             if [ -n "$(sudo docker ps -aq -f name=app)" ]; then
                 echo "Stopping and removing the previous container..."
                 sudo docker stop app
                 sudo docker rm app
             fi
-
+  
+            # Run the Docker container
             echo "Running the Docker container..."
             sudo docker run -d --name app -p 8080:8080 \
               -e RUST_LOG="${{ secrets.RUST_LOG }}" \
@@ -78,18 +110,11 @@ jobs:
               -e WEBAUTHN_ID="${{ secrets.WEBAUTHN_ID }}" \
               -e WEBAUTHN_ORIGIN="${{ secrets.WEBAUTHN_ORIGIN }}" \
               "${{ secrets.ECR_REPOSITORY }}:latest"
-
+  
+            # Prune unused Docker images
             echo "Pruning unused Docker images..."
             sudo docker image prune -f
+  
             echo "Deployment to EC2 completed successfully."
-
-  notify-discord:
-    name: Notify Discord on Push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send Notification to Discord
-        uses: Ilshidur/action-discord@master
-        env:
-          DISCORD_WEBHOOK: https://discord.com/api/webhooks/1339288263470481489/ldZF12MCdvcBHhRWqJFvo_WCGh5BS0h6ojI-IqnHY3GNZSRXtb2y856WIT-TqDZoE1tg
-        with:
-          args: "🚀 **New Push to `devops` Branch!**\n- Commit: `${{ github.event.head_commit.id }}`\n- Author: `${{ github.event.pusher.name }}`\n- Message: `${{ github.event.head_commit.message }}`"
+  
+    
