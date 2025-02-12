@@ -6,12 +6,31 @@ on:
       - devops
 
 jobs:
-  build-and-push-to-ecr:
-    name: Build and Push Docker Image to ECR
-    runs-on: ubuntu-latest
 
+  notify-discord:
+    name: Notify Discord on Push & PR Merge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Notification to Discord
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          args: |
+            🚀 **GitHub Notification**
+            - **Event:** `${{ github.event_name }}`
+            - **Branch:** `${{ github.ref }}`
+            - **Commit:** `${{ github.event.head_commit.id || github.event.pull_request.head.sha }}`
+            - **Author:** `${{ github.event.pusher.name || github.event.pull_request.user.login }}`
+            - **Message:** `${{ github.event.head_commit.message || github.event.pull_request.title }}`
+            - **Triggered by:** `${{ github.actor }}`
   
 
+  build-and-push-to-ecr:
+    name: Build and Push Docker Image to ECR
+    #needs: notify-discord
+    runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
