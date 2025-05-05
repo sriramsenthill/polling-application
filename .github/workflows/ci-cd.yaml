@@ -83,7 +83,6 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           port: 22
           script: |
-            sudo su
             echo "Authenticating Docker with ECR..."
             # Define the ECR repository URI
             sudo aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
